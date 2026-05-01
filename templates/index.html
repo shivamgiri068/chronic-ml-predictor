@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <h1>Predictive Chronic Care Dashboard</h1>
+        <p class="lead">
+          Enter health indicators, run ML-based risk prediction (Logistic Regression, Random Forest, SVM),
+          and get personalized preventive recommendations.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="{{ url_for('register') }}">Get started</a>
+          <a class="btn btn-ghost" href="{{ url_for('login') }}">I already have an account</a>
+        </div>
+        <div class="badges">
+          <span class="badge">Flask</span>
+          <span class="badge">Scikit-learn</span>
+          <span class="badge">SQLite</span>
+          <span class="badge">Chart.js</span>
+        </div>
+      </div>
+
+      <div class="hero-card">
+        <div class="hero-card-top">
+          <div class="mini-kpi">
+            <div class="mini-kpi-label">Risk status</div>
+            <div class="mini-kpi-value"><span class="pill pill-green">Low</span></div>
+          </div>
+          <div class="mini-kpi">
+            <div class="mini-kpi-label">Probability</div>
+            <div class="mini-kpi-value">18.2%</div>
+          </div>
+          <div class="mini-kpi">
+            <div class="mini-kpi-label">Recommendation</div>
+            <div class="mini-kpi-value">Lifestyle plan</div>
+          </div>
+        </div>
+        <div class="hero-card-body">
+          <canvas id="heroChart" height="140"></canvas>
+          <p class="muted" style="margin-top: 10px;">
+            Login to view your history, charts, downloadable reports, and health tips chatbot.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      if (!window.Chart) return;
+      const ctx = document.getElementById("heroChart");
+      if (!ctx) return;
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+          datasets: [{
+            label: "Risk %",
+            data: [22, 18, 25, 20, 19, 18, 21],
+            borderColor: "#3b82f6",
+            backgroundColor: "rgba(59,130,246,0.18)",
+            fill: true,
+            tension: 0.35,
+            pointRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, max: 100 } }
+        }
+      });
+    });
+  </script>
+{% endblock %}

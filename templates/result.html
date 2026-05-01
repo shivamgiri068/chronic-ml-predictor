@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="grid-main">
+    <div class="col">
+      <div class="page-title">
+        <div>
+          <h2>Prediction result</h2>
+          <div class="muted">Saved at {{ pred.created_at.strftime("%Y-%m-%d %H:%M") }}</div>
+        </div>
+        <div class="pill-row">
+          {% if pred.risk_level == "low" %}
+            <span class="pill pill-green">LOW RISK</span>
+          {% elif pred.risk_level == "medium" %}
+            <span class="pill pill-yellow">MEDIUM RISK</span>
+          {% else %}
+            <span class="pill pill-red">HIGH RISK</span>
+          {% endif %}
+          <span class="pill pill-gray">Model: {{ pred.model_name }}</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Risk probability</div>
+            <div class="muted">Higher means higher predicted risk</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="kpi">
+            <div class="kpi-value">{{ (pred.probability*100)|round(1) }}%</div>
+            <div class="kpi-sub">Risk level: <b>{{ pred.risk_level|upper }}</b></div>
+          </div>
+          <div class="bar">
+            <div class="bar-fill"
+                 style="width: {{ (pred.probability*100)|round(0) }}%;
+                        background:
+                        {% if pred.risk_level == 'low' %} linear-gradient(90deg,#10b981,#34d399)
+                        {% elif pred.risk_level == 'medium' %} linear-gradient(90deg,#f59e0b,#fbbf24)
+                        {% else %} linear-gradient(90deg,#ef4444,#f87171)
+                        {% endif %};">
+            </div>
+          </div>
+          <div class="actions" style="margin-top: 14px;">
+            <a class="btn btn-ghost" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+            <a class="btn btn-primary" href="{{ url_for('report_pdf', prediction_id=pred.id) }}">Download PDF report</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Input summary</div>
+            <div class="muted">Snapshot used for this prediction</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="grid-3">
+            <div class="kv"><div class="k">Age</div><div class="v">{{ pred.age }}</div></div>
+            <div class="kv"><div class="k">Gender</div><div class="v">{{ pred.gender }}</div></div>
+            <div class="kv"><div class="k">BMI</div><div class="v">{{ pred.bmi }}</div></div>
+            <div class="kv"><div class="k">Blood Pressure</div><div class="v">{{ pred.blood_pressure }}</div></div>
+            <div class="kv"><div class="k">Glucose</div><div class="v">{{ pred.glucose }}</div></div>
+            <div class="kv"><div class="k">Family history</div><div class="v">{{ pred.family_history }}</div></div>
+            <div class="kv"><div class="k">Smoking</div><div class="v">{{ pred.smoking }}</div></div>
+            <div class="kv"><div class="k">Alcohol</div><div class="v">{{ pred.alcohol }}</div></div>
+            <div class="kv kv-wide"><div class="k">Symptoms</div><div class="v">{{ pred.symptoms }}</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="col side">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Recommendations</div>
+            <div class="muted">Based on risk level</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% for section, items in recs.items() %}
+            <div class="rec-section">
+              <div class="rec-title">{{ section|capitalize }}</div>
+              <ul class="rec-list">
+                {% for item in items %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
+  </section>
+{% endblock %}

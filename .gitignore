@@ -1,0 +1,30 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+
+# Local DB / instance data
+instance/
+*.sqlite3
+
+# ML artifacts
+ml_artifacts/
+
+# Venv
+.venv/
+venv/
+chronic_disease_project.zip
+.venv/
+__pycache__/
+instance/
+ml_artifacts/
+
+chronic_disease_project.zip
+.venv/
+__pycache__/
+instance/
+ml_artifacts/
+.venv/
+__pycache__/
+instance/

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title or "Predictive Analysis and Management System" }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <a class="brand" href="{{ url_for('index') }}">
+          <span class="brand-mark">PA</span>
+          <span class="brand-title">Predictive Chronic Care</span>
+        </a>
+        <nav class="nav">
+          {% if current_user.is_authenticated %}
+            <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+            {% if current_user.role == "doctor" %}
+              <a class="nav-link" href="{{ url_for('doctor_patients') }}">Patients</a>
+            {% endif %}
+            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+          {% else %}
+            <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+            <a class="nav-link nav-cta" href="{{ url_for('register') }}">Register</a>
+          {% endif %}
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-wrap">
+            {% for category, message in messages %}
+              <div class="flash flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div>
+          <div class="footer-title">Predictive Analysis and Management System for Chronic Diseases using Machine Learning</div>
+          <div class="footer-sub">Demo project — not medical advice.</div>
+        </div>
+        <div class="footer-links">
+          <a href="https://render.com/" target="_blank" rel="noreferrer">Render</a>
+          <a href="https://railway.app/" target="_blank" rel="noreferrer">Railway</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

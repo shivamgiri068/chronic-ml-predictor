@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Patients</h2>
+      <p class="muted">Doctor view: browse patient profiles and prediction history.</p>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        {% if patients %}
+          <div class="table">
+            <div class="thead">
+              <div>Name</div>
+              <div>Email</div>
+              <div>Joined</div>
+              <div></div>
+            </div>
+            {% for p in patients %}
+              <div class="trow">
+                <div><b>{{ p.name }}</b></div>
+                <div class="muted">{{ p.email }}</div>
+                <div>{{ p.created_at.strftime("%Y-%m-%d") }}</div>
+                <div><a class="link" href="{{ url_for('doctor_patient', user_id=p.id) }}">View</a></div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">No patients yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

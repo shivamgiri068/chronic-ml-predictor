@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="grid-main">
+    <div class="col">
+      <div class="page-title">
+        <div>
+          <h2>Dashboard</h2>
+          <div class="muted">Welcome, {{ current_user.name }} ({{ current_user.role|capitalize }})</div>
+        </div>
+        <div class="pill-row">
+          <span class="pill pill-blue">ML: LR / RF / SVM</span>
+          <span class="pill pill-gray">DB: SQLite</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Risk trend (last 10)</div>
+            <div class="muted">Probability (%) over time</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <canvas id="riskChart" height="110"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Recent predictions</div>
+            <div class="muted">Your latest results</div>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if recent %}
+            <div class="table">
+              <div class="thead">
+                <div>Date</div>
+                <div>Risk</div>
+                <div>Probability</div>
+                <div>Model</div>
+                <div></div>
+              </div>
+              {% for r in recent %}
+                <div class="trow">
+                  <div>{{ r.created_at.strftime("%Y-%m-%d %H:%M") }}</div>
+                  <div>
+                    {% if r.risk_level == "low" %}
+                      <span class="pill pill-green">Low</span>
+                    {% elif r.risk_level == "medium" %}
+                      <span class="pill pill-yellow">Medium</span>
+                    {% else %}
+                      <span class="pill pill-red">High</span>
+                    {% endif %}
+                  </div>
+                  <div><b>{{ (r.probability*100)|round(1) }}%</b></div>
+                  <div class="muted">{{ r.model_name }}</div>
+                  <div><a class="link" href="{{ url_for('result', prediction_id=r.id) }}">View</a></div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty">No predictions yet. Use the form to run your first prediction.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <aside class="col side">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Health data input</div>
+            <div class="muted">Validated + ML-ready fields</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <form id="predictForm" class="form" method="post" action="{{ url_for('predict_post') }}">
+            <div class="grid-2">
+              <div class="field">
+                <label>Age</label>
+                <input name="age" type="number" min="1" max="120" required />
+              </div>
+              <div class="field">
+                <label>Gender</label>
+                <select name="gender" required>
+                  <option value="" selected disabled>Select</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label>BMI</label>
+                <input name="bmi" type="number" step="0.1" min="10" max="80" required placeholder="e.g., 24.6" />
+              </div>
+              <div class="field">
+                <label>Blood Pressure</label>
+                <input name="blood_pressure" type="number" step="0.1" min="50" max="260" required placeholder="e.g., 128" />
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label>Glucose Level</label>
+                <input name="glucose" type="number" step="0.1" min="40" max="400" required placeholder="e.g., 105" />
+              </div>
+              <div class="field">
+                <label>Family history</label>
+                <select name="family_history" required>
+                  <option value="" selected disabled>Select</option>
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label>Smoking</label>
+                <select name="smoking" required>
+                  <option value="" selected disabled>Select</option>
+                  <option value="never">Never</option>
+                  <option value="occasionally">Occasionally</option>
+                  <option value="often">Often</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Alcohol</label>
+                <select name="alcohol" required>
+                  <option value="" selected disabled>Select</option>
+                  <option value="never">Never</option>
+                  <option value="occasionally">Occasionally</option>
+                  <option value="often">Often</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Symptoms (multi-select)</label>
+              <select name="symptoms" multiple size="6" class="multi">
+                {% for s in symptom_options %}
+                  <option value="{{ s }}">{{ s }}</option>
+                {% endfor %}
+              </select>
+              <div class="muted tiny">Tip: hold Ctrl/Cmd to select multiple.</div>
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-primary" type="submit">
+                <span class="btn-text">Predict risk</span>
+                <span class="btn-spinner" aria-hidden="true"></span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Health tips chatbot</div>
+            <div class="muted">Quick prevention guidance</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="chatBox" class="chat">
+            <div class="chat-msg bot">Ask me about diet, exercise, BP, glucose, or symptoms.</div>
+          </div>
+          <form id="chatForm" class="chat-form">
+            <input id="chatInput" type="text" placeholder="Type a question…" />
+            <button class="btn btn-ghost" type="submit">Send</button>
+          </form>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <script>
+    window.__chartLabels = {{ chart_labels|tojson }};
+    window.__chartProbs = {{ chart_probs|tojson }};
+  </script>
+{% endblock %}

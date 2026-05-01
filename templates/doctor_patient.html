@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Patient: {{ patient.name }}</h2>
+      <p class="muted">{{ patient.email }}</p>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Prediction history</div>
+          <div class="muted">Last 50 entries</div>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if preds %}
+          <div class="table">
+            <div class="thead">
+              <div>Date</div>
+              <div>Risk</div>
+              <div>Probability</div>
+              <div></div>
+            </div>
+            {% for r in preds %}
+              <div class="trow">
+                <div>{{ r.created_at.strftime("%Y-%m-%d %H:%M") }}</div>
+                <div>
+                  {% if r.risk_level == "low" %}
+                    <span class="pill pill-green">Low</span>
+                  {% elif r.risk_level == "medium" %}
+                    <span class="pill pill-yellow">Medium</span>
+                  {% else %}
+                    <span class="pill pill-red">High</span>
+                  {% endif %}
+                </div>
+                <div><b>{{ (r.probability*100)|round(1) }}%</b></div>
+                <div><a class="link" href="{{ url_for('result', prediction_id=r.id) }}">Open</a></div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">No predictions for this patient yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}
