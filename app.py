@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 from dotenv import load_dotenv
 from flask import (
     Flask,
@@ -250,7 +251,8 @@ def create_app() -> Flask:
             "symptom_count": symptom_count,
         }
 
-        proba = float(model.predict_proba([X])[0][1])
+        # Our preprocessing pipeline expects a tabular input with column names.
+        proba = float(model.predict_proba(pd.DataFrame([X]))[0][1])
         proba = float(np.clip(proba, 0.0, 1.0))
         risk = risk_from_probability(proba)
         recs = recommendations_for(risk)
