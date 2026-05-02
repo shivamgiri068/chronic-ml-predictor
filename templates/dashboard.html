@@ -37,25 +37,33 @@
             <div class="table">
               <div class="thead">
                 <div>Date</div>
-                <div>Risk</div>
-                <div>Probability</div>
-                <div>Model</div>
+                <div>Overall Risk</div>
+                <div>Highest Prob</div>
+                <div>Likely Disease</div>
                 <div></div>
               </div>
               {% for r in recent %}
                 <div class="trow">
                   <div>{{ r.created_at.strftime("%Y-%m-%d %H:%M") }}</div>
                   <div>
-                    {% if r.risk_level == "low" %}
+                    {% set risk_val = r.overall_risk if r.overall_risk else r.risk_level %}
+                    {% if risk_val == "low" %}
                       <span class="pill pill-green">Low</span>
-                    {% elif r.risk_level == "medium" %}
+                    {% elif risk_val == "medium" %}
                       <span class="pill pill-yellow">Medium</span>
                     {% else %}
                       <span class="pill pill-red">High</span>
                     {% endif %}
                   </div>
-                  <div><b>{{ (r.probability*100)|round(1) }}%</b></div>
-                  <div class="muted">{{ r.model_name }}</div>
+                  <div><b>
+                    {% if r.diabetes_risk %}
+                      {% set m_prob = [r.diabetes_risk, r.heart_risk, r.kidney_risk]|max %}
+                      {{ (m_prob * 100)|round(1) }}%
+                    {% else %}
+                      {{ (r.probability*100)|round(1) }}%
+                    {% endif %}
+                  </b></div>
+                  <div class="muted">{{ r.most_likely_disease|capitalize if r.most_likely_disease else "General" }}</div>
                   <div><a class="link" href="{{ url_for('result', prediction_id=r.id) }}">View</a></div>
                 </div>
               {% endfor %}

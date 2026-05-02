@@ -1,5 +1,6 @@
-def recommendations_for(risk_level: str) -> dict:
+def recommendations_for(risk_level: str, disease_type: str = "general") -> dict:
     risk_level = (risk_level or "").lower()
+    disease_type = (disease_type or "").lower()
 
     base = {
         "diet": [
@@ -20,10 +21,19 @@ def recommendations_for(risk_level: str) -> dict:
         ],
     }
 
+    if disease_type == "diabetes":
+        base["diet"].append("Monitor your daily sugar intake strictly.")
+    elif disease_type == "heart disease" or disease_type == "heart":
+        base["diet"].append("Focus on cholesterol control and heart-healthy fats.")
+        base["exercise"].append("Incorporate more cardio if approved by a doctor.")
+    elif disease_type == "kidney disease" or disease_type == "kidney":
+        base["diet"].append("Monitor sodium and protein intake.")
+        base["tips"].append("Maintain proper hydration and monitor BP closely.")
+
     if risk_level == "low":
         return {
             **base,
-            "doctor": ["Maintain routine checkups and annual screening as advised."],
+            "doctor": base["doctor"] + ["Maintain routine checkups and annual screening as advised."],
         }
 
     if risk_level == "medium":

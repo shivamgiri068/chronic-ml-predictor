@@ -46,18 +46,34 @@ def generate_sample_dataset_csv(csv_path: str, n: int = 1200, seed: int = 7) -> 
 
     # Create a probability via a simple logistic recipe, then sample labels
     # (This isn't "medical truth", just a consistent demo signal.)
-    z = (
-        (age - 45) / 18
-        + (bmi - 25) / 6
-        + (blood_pressure - 120) / 22
-        + (glucose - 100) / 25
-        + 0.6 * (family_history == "yes").astype(float)
-        + 0.3 * (smoking == "often").astype(float)
-        + 0.25 * (alcohol == "often").astype(float)
-        + 0.18 * symptom_count
+    # Create probabilities for each disease
+    z_diabetes = (
+        (glucose - 100) / 20
+        + (bmi - 25) / 5
+        + (age - 45) / 20
+        + 0.5 * (family_history == "yes").astype(float)
     )
-    p = 1 / (1 + np.exp(-z))
-    label = (rng.random(size=n) < p).astype(int)
+    p_diabetes = 1 / (1 + np.exp(-z_diabetes))
+    label_diabetes = (rng.random(size=n) < p_diabetes).astype(int)
+
+    z_heart = (
+        (blood_pressure - 120) / 20
+        + (age - 45) / 15
+        + 0.6 * (smoking == "often").astype(float)
+        + 0.4 * (alcohol == "often").astype(float)
+        + (bmi - 25) / 8
+    )
+    p_heart = 1 / (1 + np.exp(-z_heart))
+    label_heart = (rng.random(size=n) < p_heart).astype(int)
+
+    z_kidney = (
+        (blood_pressure - 120) / 22
+        + (glucose - 100) / 25
+        + (age - 45) / 18
+        + 0.3 * symptom_count
+    )
+    p_kidney = 1 / (1 + np.exp(-z_kidney))
+    label_kidney = (rng.random(size=n) < p_kidney).astype(int)
 
     df = pd.DataFrame(
         {
@@ -70,7 +86,9 @@ def generate_sample_dataset_csv(csv_path: str, n: int = 1200, seed: int = 7) -> 
             "alcohol": alcohol,
             "family_history": family_history,
             "symptom_count": symptom_count,
-            "label": label,
+            "label_diabetes": label_diabetes,
+            "label_heart": label_heart,
+            "label_kidney": label_kidney,
         }
     )
 
@@ -81,14 +99,6 @@ def generate_sample_dataset_csv(csv_path: str, n: int = 1200, seed: int = 7) -> 
 
     ensure_dirs(os.path.dirname(csv_path))
     df.to_csv(csv_path, index=False)
-
-
-@dataclass(frozen=True)
-class TrainingResult:
-    best_model_name: str
-    best_accuracy: float
-    metrics: dict
-    artifact_dir: str
 
 
 def build_preprocessor():
@@ -120,20 +130,11 @@ def train_and_select_model(
     dataset_csv_path: str,
     artifact_dir: str,
     seed: int = 7,
-) -> TrainingResult:
+):
     if not os.path.exists(dataset_csv_path):
         generate_sample_dataset_csv(dataset_csv_path, n=1200, seed=seed)
 
     df = pd.read_csv(dataset_csv_path)
-    df = df[[*FEATURE_COLUMNS, "label"]].copy()
-
-    X = df[FEATURE_COLUMNS]
-    y = df["label"].astype(int)
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=seed, stratify=y
-    )
-
     preprocessor = build_preprocessor()
 
     candidates = {
@@ -144,32 +145,47 @@ def train_and_select_model(
         "svm": SVC(probability=True, kernel="rbf", random_state=seed),
     }
 
-    metrics: dict = {"candidates": {}}
-    best_name = None
-    best_acc = -1.0
-    best_pipeline = None
-
-    for name, model in candidates.items():
-        pipeline = Pipeline(steps=[("preprocess", preprocessor), ("model", model)])
-        pipeline.fit(X_train, y_train)
-        preds = pipeline.predict(X_test)
-        acc = float(accuracy_score(y_test, preds))
-        metrics["candidates"][name] = {"accuracy": acc}
-
-        if acc > best_acc:
-            best_acc = acc
-            best_name = name
-            best_pipeline = pipeline
-
-    assert best_name is not None and best_pipeline is not None
-
+    metrics = {}
+    best_names = {}
+    
     ensure_dirs(artifact_dir)
-    joblib.dump(best_pipeline, os.path.join(artifact_dir, "model.joblib"))
+
+    for disease in ["diabetes", "heart", "kidney"]:
+        label_col = f"label_{disease}"
+        
+        X = df[FEATURE_COLUMNS]
+        y = df[label_col].astype(int)
+        
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=seed, stratify=y
+        )
+        
+        best_acc = -1.0
+        best_name = None
+        best_pipeline = None
+        disease_metrics = {}
+        
+        for name, model in candidates.items():
+            pipeline = Pipeline(steps=[("preprocess", preprocessor), ("model", model)])
+            pipeline.fit(X_train, y_train)
+            preds = pipeline.predict(X_test)
+            acc = float(accuracy_score(y_test, preds))
+            disease_metrics[name] = {"accuracy": acc}
+
+            if acc > best_acc:
+                best_acc = acc
+                best_name = name
+                best_pipeline = pipeline
+
+        metrics[disease] = disease_metrics
+        best_names[disease] = best_name
+        
+        joblib.dump(best_pipeline, os.path.join(artifact_dir, f"model_{disease}.joblib"))
+
     with open(os.path.join(artifact_dir, "metadata.json"), "w", encoding="utf-8") as f:
         json.dump(
             {
-                "best_model_name": best_name,
-                "best_accuracy": best_acc,
+                "best_models": best_names,
                 "metrics": metrics,
                 "feature_columns": FEATURE_COLUMNS,
             },
@@ -177,16 +193,14 @@ def train_and_select_model(
             indent=2,
         )
 
-    return TrainingResult(
-        best_model_name=best_name,
-        best_accuracy=best_acc,
-        metrics=metrics,
-        artifact_dir=artifact_dir,
-    )
+    return {"status": "success"}
 
 
-def load_model(artifact_dir: str):
-    path = os.path.join(artifact_dir, "model.joblib")
-    if not os.path.exists(path):
-        raise FileNotFoundError("Model artifact not found. Train the model first.")
-    return joblib.load(path)
+def load_models(artifact_dir: str):
+    models = {}
+    for disease in ["diabetes", "heart", "kidney"]:
+        path = os.path.join(artifact_dir, f"model_{disease}.joblib")
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Model artifact not found for {disease}.")
+        models[disease] = joblib.load(path)
+    return models

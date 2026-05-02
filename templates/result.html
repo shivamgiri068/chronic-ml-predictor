@@ -22,15 +22,58 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <div class="card-title">Risk probability</div>
-            <div class="muted">Higher means higher predicted risk</div>
+            <div class="card-title">Overall Risk Assessment</div>
+            <div class="muted">Most likely disease: <b>{{ pred.most_likely_disease|capitalize if pred.most_likely_disease else 'General' }}</b></div>
           </div>
         </div>
         <div class="card-body">
           <div class="kpi">
-            <div class="kpi-value">{{ (pred.probability*100)|round(1) }}%</div>
-            <div class="kpi-sub">Risk level: <b>{{ pred.risk_level|upper }}</b></div>
+            {% set o_risk = pred.overall_risk if pred.overall_risk else pred.risk_level %}
+            <div class="kpi-value" style="color: {% if o_risk == 'low' %}#10b981{% elif o_risk == 'medium' %}#f59e0b{% else %}#ef4444{% endif %};">
+              {{ o_risk|upper }} RISK
+            </div>
+            <div class="kpi-sub">Based on multi-disease analysis</div>
           </div>
+          
+          {% if pred.diabetes_risk %}
+          <div style="margin-top: 20px; margin-bottom: 20px;">
+            <canvas id="multiDiseaseChart" height="150"></canvas>
+          </div>
+          <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+          <script>
+            document.addEventListener('DOMContentLoaded', function() {
+              const ctx = document.getElementById('multiDiseaseChart').getContext('2d');
+              const data = [
+                {{ (pred.diabetes_risk * 100)|round(1) }},
+                {{ (pred.heart_risk * 100)|round(1) }},
+                {{ (pred.kidney_risk * 100)|round(1) }}
+              ];
+              
+              const bgColors = data.map(val => {
+                if(val < 33) return '#10b981'; // green
+                if(val < 66) return '#f59e0b'; // yellow
+                return '#ef4444'; // red
+              });
+
+              new Chart(ctx, {
+                type: 'bar',
+                data: {
+                  labels: ['Diabetes', 'Heart Disease', 'Kidney Disease'],
+                  datasets: [{
+                    label: 'Risk Probability (%)',
+                    data: data,
+                    backgroundColor: bgColors,
+                    borderRadius: 4
+                  }]
+                },
+                options: {
+                  scales: { y: { beginAtZero: true, max: 100 } },
+                  plugins: { legend: { display: false } }
+                }
+              });
+            });
+          </script>
+          {% else %}
           <div class="bar">
             <div class="bar-fill"
                  style="width: {{ (pred.probability*100)|round(0) }}%;
@@ -41,6 +84,7 @@
                         {% endif %};">
             </div>
           </div>
+          {% endif %}
           <div class="actions" style="margin-top: 14px;">
             <a class="btn btn-ghost" href="{{ url_for('dashboard') }}">Back to dashboard</a>
             <a class="btn btn-primary" href="{{ url_for('report_pdf', prediction_id=pred.id) }}">Download PDF report</a>

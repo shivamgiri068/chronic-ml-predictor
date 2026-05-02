@@ -25,7 +25,7 @@ from config import Config
 from db import db
 from ml.recommendations import recommendations_for
 from ml.schema import SYMPTOM_OPTIONS, risk_from_probability
-from ml.training import load_model, train_and_select_model
+from ml.training import load_models, train_and_select_model
 from models import MedicalHistory, Prediction, User
 
 
@@ -58,21 +58,21 @@ def create_app() -> Flask:
 
         # Ensure ML artifacts exist (self-contained run)
         try:
-            _ = load_model(app.config["ARTIFACT_DIR"])
+            _ = load_models(app.config["ARTIFACT_DIR"])
         except FileNotFoundError:
             train_and_select_model(
                 dataset_csv_path=os.path.join("data", "sample_dataset.csv"),
                 artifact_dir=app.config["ARTIFACT_DIR"],
             )
 
-    def get_model_and_name():
-        model = load_model(app.config["ARTIFACT_DIR"])
+    def get_models_and_names():
+        models = load_models(app.config["ARTIFACT_DIR"])
         meta_path = os.path.join(app.config["ARTIFACT_DIR"], "metadata.json")
-        model_name = "model"
+        model_names = {d: f"model_{d}" for d in ["diabetes", "heart", "kidney"]}
         if os.path.exists(meta_path):
             with open(meta_path, "r", encoding="utf-8") as f:
-                model_name = json.load(f).get("best_model_name", model_name)
-        return model, model_name
+                model_names = json.load(f).get("best_models", model_names)
+        return models, model_names
 
     def parse_symptoms(symptoms_raw: list[str]) -> tuple[str, int]:
         chosen = [s for s in symptoms_raw if s in SYMPTOM_OPTIONS]
@@ -214,7 +214,13 @@ def create_app() -> Flask:
         # For the chart: last 10 probabilities
         chart_rows = recent[:10][::-1]
         chart_labels = [r.created_at.strftime("%m-%d %H:%M") for r in chart_rows]
-        chart_probs = [round(float(r.probability) * 100, 1) for r in chart_rows]
+        chart_probs = []
+        for r in chart_rows:
+            if r.diabetes_risk is not None:
+                max_prob = max(float(r.diabetes_risk), float(r.heart_risk), float(r.kidney_risk))
+            else:
+                max_prob = float(r.probability or 0)
+            chart_probs.append(round(max_prob * 100, 1))
 
         return render_template(
             "dashboard.html",
@@ -237,7 +243,7 @@ def create_app() -> Flask:
 
         symptoms_csv, symptom_count = parse_symptoms(symptoms_raw if isinstance(symptoms_raw, list) else [])
 
-        model, model_name = get_model_and_name()
+        models, model_names = get_models_and_names()
 
         X = {
             "age": age,
@@ -252,17 +258,27 @@ def create_app() -> Flask:
         }
 
         # Our preprocessing pipeline expects a tabular input with column names.
-        proba = float(model.predict_proba(pd.DataFrame([X]))[0][1])
-        proba = float(np.clip(proba, 0.0, 1.0))
-        risk = risk_from_probability(proba)
-        recs = recommendations_for(risk)
+        X_df = pd.DataFrame([X])
+        
+        probabilities = {}
+        for disease in ["diabetes", "heart", "kidney"]:
+            model = models[disease]
+            proba = float(model.predict_proba(X_df)[0][1])
+            probabilities[disease] = float(np.clip(proba, 0.0, 1.0))
+            
+        most_likely_disease = max(probabilities, key=probabilities.get)
+        highest_proba = probabilities[most_likely_disease]
+        
+        overall_risk = risk_from_probability(highest_proba)
+        recs = recommendations_for(overall_risk, most_likely_disease)
 
         return {
             "inputs": {**X, "symptoms": symptoms_csv},
-            "probability": proba,
-            "risk_level": risk,
+            "overall_risk": overall_risk,
+            "most_likely_disease": most_likely_disease,
+            "probabilities": probabilities,
             "recommendations": recs,
-            "model_name": model_name,
+            "model_names": model_names,
         }
 
     @app.post("/predict")
@@ -298,9 +314,13 @@ def create_app() -> Flask:
             alcohol=result["inputs"]["alcohol"],
             family_history=result["inputs"]["family_history"],
             symptoms=result["inputs"]["symptoms"],
-            risk_level=result["risk_level"],
-            probability=float(result["probability"]),
-            model_name=result["model_name"],
+            diabetes_risk=result["probabilities"]["diabetes"],
+            heart_risk=result["probabilities"]["heart"],
+            kidney_risk=result["probabilities"]["kidney"],
+            overall_risk=result["overall_risk"],
+            most_likely_disease=result["most_likely_disease"],
+            model_name="multi_models",
+
             created_at=datetime.utcnow(),
         )
         db.session.add(pred)
@@ -343,9 +363,13 @@ def create_app() -> Flask:
             alcohol=result["inputs"]["alcohol"],
             family_history=result["inputs"]["family_history"],
             symptoms=result["inputs"]["symptoms"],
-            risk_level=result["risk_level"],
-            probability=float(result["probability"]),
-            model_name=result["model_name"],
+            diabetes_risk=result["probabilities"]["diabetes"],
+            heart_risk=result["probabilities"]["heart"],
+            kidney_risk=result["probabilities"]["kidney"],
+            overall_risk=result["overall_risk"],
+            most_likely_disease=result["most_likely_disease"],
+            model_name="multi_models",
+
         )
         db.session.add(pred)
         db.session.commit()
@@ -372,8 +396,11 @@ def create_app() -> Flask:
                     {
                         "id": r.id,
                         "user_id": r.user_id,
-                        "risk_level": r.risk_level,
-                        "probability": r.probability,
+                        "overall_risk": r.overall_risk,
+                        "most_likely_disease": r.most_likely_disease,
+                        "diabetes_risk": r.diabetes_risk,
+                        "heart_risk": r.heart_risk,
+                        "kidney_risk": r.kidney_risk,
                         "model_name": r.model_name,
                         "created_at": r.created_at.isoformat(),
                     }
@@ -465,9 +492,15 @@ def create_app() -> Flask:
         pdf.ln(2)
 
         pdf.set_font("Helvetica", size=12)
-        pdf.cell(0, 8, f"Risk level: {pred.risk_level.upper()}", ln=1)
-        pdf.cell(0, 8, f"Probability: {pred.probability*100:.1f}%", ln=1)
-        pdf.cell(0, 8, f"Model: {pred.model_name}", ln=1)
+        pdf.cell(0, 8, f"Overall Risk: {str(pred.overall_risk).upper()}", ln=1)
+        pdf.cell(0, 8, f"Most likely disease: {str(pred.most_likely_disease).capitalize()}", ln=1)
+        pdf.ln(3)
+
+        pdf.set_font("Helvetica", size=11)
+        pdf.cell(0, 8, "Individual Risks:", ln=1)
+        pdf.cell(0, 8, f"  - Diabetes: {pred.diabetes_risk*100:.1f}%", ln=1)
+        pdf.cell(0, 8, f"  - Heart Disease: {pred.heart_risk*100:.1f}%", ln=1)
+        pdf.cell(0, 8, f"  - Kidney Disease: {pred.kidney_risk*100:.1f}%", ln=1)
         pdf.ln(3)
 
         pdf.set_font("Helvetica", size=11)

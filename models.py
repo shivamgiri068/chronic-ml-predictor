@@ -61,8 +61,15 @@ class Prediction(db.Model):
     symptoms = db.Column(db.Text, nullable=False)  # comma-separated
 
     # Outputs
-    risk_level = db.Column(db.String(10), nullable=False)  # low/medium/high
-    probability = db.Column(db.Float, nullable=False)  # 0..1
+    risk_level = db.Column(db.String(10), nullable=True)  # low/medium/high (legacy)
+    probability = db.Column(db.Float, nullable=True)  # 0..1 (legacy)
+    
+    diabetes_risk = db.Column(db.Float, nullable=True)
+    heart_risk = db.Column(db.Float, nullable=True)
+    kidney_risk = db.Column(db.Float, nullable=True)
+    overall_risk = db.Column(db.String(10), nullable=True)
+    most_likely_disease = db.Column(db.String(50), nullable=True)
+
     model_name = db.Column(db.String(60), nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
