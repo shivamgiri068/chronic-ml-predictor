@@ -471,7 +471,7 @@ def create_app() -> Flask:
         pdf.ln(3)
 
         pdf.set_font("Helvetica", size=11)
-        pdf.multi_cell(0, 6, "Inputs:")
+        pdf.multi_cell(0, 6, "Inputs:", new_x="LMARGIN", new_y="NEXT")
         pdf.multi_cell(
             0,
             6,
@@ -484,17 +484,19 @@ def create_app() -> Flask:
             f"- Alcohol: {pred.alcohol}\n"
             f"- Family history: {pred.family_history}\n"
             f"- Symptoms: {pred.symptoms}\n",
+            new_x="LMARGIN",
+            new_y="NEXT",
         )
 
         pdf.ln(2)
         pdf.set_font("Helvetica", size=11)
-        pdf.multi_cell(0, 6, "Recommendations:")
+        pdf.multi_cell(0, 6, "Recommendations:", new_x="LMARGIN", new_y="NEXT")
         for k in ["diet", "exercise", "tips", "doctor"]:
             pdf.set_font("Helvetica", style="B", size=11)
             pdf.cell(0, 7, k.capitalize(), ln=1)
             pdf.set_font("Helvetica", size=11)
             for item in recs.get(k, []):
-                pdf.multi_cell(0, 6, f"- {item}")
+                pdf.multi_cell(0, 6, f"- {item}", new_x="LMARGIN", new_y="NEXT")
             pdf.ln(1)
 
         import io
