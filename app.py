@@ -497,9 +497,14 @@ def create_app() -> Flask:
                 pdf.multi_cell(0, 6, f"- {item}")
             pdf.ln(1)
 
-        out_path = os.path.join("instance", f"report_{prediction_id}.pdf")
-        pdf.output(out_path)
-        return send_file(out_path, as_attachment=True, download_name=f"report_{prediction_id}.pdf")
+        import io
+        pdf_bytes = pdf.output()
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"report_{prediction_id}.pdf",
+        )
 
     return app
 
