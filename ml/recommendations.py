@@ -12,7 +12,7 @@ def recommendations_for(risk_level: str) -> dict:
             "Add 2 days/week of strength training (bodyweight exercises are fine).",
         ],
         "tips": [
-            "Sleep 7–9 hours and keep a consistent schedule.",
+            "Sleep 7-9 hours and keep a consistent schedule.",
             "Stay hydrated and manage stress (breathing, meditation, journaling).",
         ],
         "doctor": [
@@ -33,7 +33,7 @@ def recommendations_for(risk_level: str) -> dict:
             + ["Reduce refined carbs (white bread, sweets) and increase fiber."],
             "doctor": [
                 "Schedule a consultation to review vitals and possible lab tests.",
-                "Track BP/glucose trends for 2–4 weeks before your appointment.",
+                "Track BP/glucose trends for 2-4 weeks before your appointment.",
             ],
         }
 
