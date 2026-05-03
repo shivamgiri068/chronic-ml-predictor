@@ -488,6 +488,7 @@ def create_app() -> Flask:
         pdf.cell(0, 10, "Chronic Disease Risk Report", ln=1)
 
         pdf.set_font("Helvetica", size=11)
+        pdf.cell(0, 8, f"Patient Name: {pred.user.name}", ln=1)
         pdf.cell(0, 8, f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", ln=1)
         pdf.ln(2)
 
