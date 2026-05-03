@@ -286,6 +286,7 @@ def create_app() -> Flask:
     def predict_post():
         form = request.form
         payload = {
+            "patient_name": form.get("patient_name", "").strip(),
             "age": form.get("age", ""),
             "gender": form.get("gender", ""),
             "bmi": form.get("bmi", ""),
@@ -305,6 +306,7 @@ def create_app() -> Flask:
 
         pred = Prediction(
             user_id=current_user.id,
+            patient_name=payload.get("patient_name") or None,
             age=int(result["inputs"]["age"]),
             gender=result["inputs"]["gender"],
             bmi=float(result["inputs"]["bmi"]),
@@ -354,6 +356,7 @@ def create_app() -> Flask:
 
         pred = Prediction(
             user_id=current_user.id,
+            patient_name=(data.get("patient_name") or "").strip() or None,
             age=int(result["inputs"]["age"]),
             gender=result["inputs"]["gender"],
             bmi=float(result["inputs"]["bmi"]),
@@ -488,7 +491,8 @@ def create_app() -> Flask:
         pdf.cell(0, 10, "Chronic Disease Risk Report", ln=1)
 
         pdf.set_font("Helvetica", size=11)
-        pdf.cell(0, 8, f"Patient Name: {pred.user.name}", ln=1)
+        display_name = pred.patient_name if pred.patient_name else pred.user.name
+        pdf.cell(0, 8, f"Patient Name: {display_name}", ln=1)
         pdf.cell(0, 8, f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", ln=1)
         pdf.ln(2)
 

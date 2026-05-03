@@ -50,6 +50,7 @@ class Prediction(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
 
     # Input snapshot
+    patient_name = db.Column(db.String(120), nullable=True)
     age = db.Column(db.Integer, nullable=False)
     gender = db.Column(db.String(20), nullable=False)
     bmi = db.Column(db.Float, nullable=False)

@@ -85,6 +85,11 @@
         </div>
         <div class="card-body">
           <form id="predictForm" class="form" method="post" action="{{ url_for('predict_post') }}">
+            <div class="field" style="margin-bottom: 1rem;">
+              <label>Patient Name</label>
+              <input name="patient_name" type="text" placeholder="Enter patient name..." />
+            </div>
+
             <div class="grid-2">
               <div class="field">
                 <label>Age</label>
